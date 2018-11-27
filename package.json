@@ -1,0 +1,29 @@
+{
+  "name": "ssmd",
+  "version": "1.0.0",
+  "description": "Super Simple Markdown Docs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IMQS/ssmd.git"
+  },
+  "keywords": [
+    "super",
+    "simple",
+    "markdown",
+    "documentation",
+    "generator"
+  ],
+  "author": "Ben Harper",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/IMQS/ssmd/issues"
+  },
+  "homepage": "https://github.com/IMQS/ssmd#readme",
+  "dependencies": {
+    "marked": "^0.5.2"
+  }
+}
