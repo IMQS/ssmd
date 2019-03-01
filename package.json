@@ -24,6 +24,10 @@
   },
   "homepage": "https://github.com/IMQS/ssmd#readme",
   "dependencies": {
-    "marked": "^0.5.2"
+    "args": "^5.0.0",
+    "light-server": "^2.6.0",
+    "marked": "^0.5.2",
+    "s3": "^4.4.0",
+    "tape": "^4.10.1"
   }
 }

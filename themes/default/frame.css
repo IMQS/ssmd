@@ -1,0 +1,59 @@
+/* This is injected into index.html */
+
+html {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    margin: 0;
+    height: 100%;
+    /* font-family: Verdana, Geneva, Tahoma, sans-serif; */
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+}
+
+.indexPane {
+    box-sizing: border-box;
+    width: 20em;
+    height: 100%;
+    padding: 1em;
+}
+
+.contentPane {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    border: none;
+    height: 100%;
+}
+
+.indexPane ul {
+    padding-inline-start: 1em;
+}
+
+.indexItem {
+    cursor: pointer;
+}
+
+.indexCategory {
+    color: #555;
+}
+
+.liCollapsed {
+    list-style-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right"><polyline points="9 18 15 12 9 6"></polyline></svg>');
+}
+
+.liExpanded {
+    list-style-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+}
+
+.liNone {
+    list-style-type: none;
+}
+
+.hidden {
+    display: none;
+}
+
+.currentTarget {
+    font-weight: 700;
+}

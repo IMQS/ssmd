@@ -1,209 +1,27 @@
 <!DOCTYPE HTML>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <style>
-        html {
-            height: 100%;
-        }
-        body {
-            display: flex;
-            margin: 0;
-            height: 100%;
-            /* font-family: Verdana, Geneva, Tahoma, sans-serif; */
-            font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
-        }
-        .indexPane {
-            box-sizing: border-box;
-            width: 20em;
-            height: 100%;
-            padding: 1em;
-        }
-        .contentPane {
-            box-sizing: border-box;
-            flex: 1 1 auto;
-            border: none;
-            height: 100%;
-        }
-        .indexPane ul {
-            padding-inline-start: 1em;
-        }
-        /*
-        .indexPane li {
-            list-style-type: none;
-        }
-        */
-        .indexItem {
-            cursor: pointer;
-        }
-        .indexCategory {
-            color: #555;
-        }
-        .liCollapsed {
-            list-style-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right"><polyline points="9 18 15 12 9 6"></polyline></svg>');
-        }
-        .liExpanded {
-            list-style-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 16 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-down"><polyline points="6 9 12 15 18 9"></polyline></svg>');
-        }
-        /*
-        .liCollapsed {
-            list-style-type:disc;
-        }
-        .liExpanded {
-            list-style-type:disc;
-        }
-        */
-        .liNone {
-            list-style-type: none;
-        }
-        .hidden {
-            display: none;
-        }
-        .currentTarget {
-            font-weight: 700;
-        }
+        /*FRAME_CSS*/
     </style>
     <script>
+
         /*PAGE_TREE*/
 
-        function setPageOpenedStatus(id, isOpen) {
-            if (isOpen)
-                localStorage.setItem("opened-" + id, "1");
-            else
-                localStorage.removeItem("opened-" + id);
-        }
-        function getPageOpenedStatus(id) {
-            return localStorage.getItem("opened-" + id) == "1";
-        }
-        function navigateToPage(url, id) {
-            // Navigate the iframe to a new location
-            var content = document.getElementsByClassName('contentPane')[0];
-            content.src = url;
-            window.location.hash = id;
-            var page = findPageById(id);
-            if (page && page.children.length != 0) {
-                togglePageOpen(id);
-            }
-            refreshIndexVisibility();
-        }
-        function togglePageOpen(id) {
-            setPageOpenedStatus(id, !getPageOpenedStatus(id));
-            refreshIndexVisibility();
-        }
-        function findPageById(id) {
-            var path = findPagePathById(id);
-            if (path == null)
-                return null;
-            return path[path.length - 1];
-        }
-        // Returns an array of pages, from the root down to the desired page, or returns null if item not found
-        function findPagePathById(id) {
-            if (id === null || id === undefined || id == "")
-                return null;
-            var find = function(page, _id) {
-                if (page.id == _id)
-                    return [page];
-                for (var i = 0; i < page.children.length; i++) {
-                    var res = find(page.children[i], _id);
-                    if (res !== null)
-                        return [page].concat(res);
-                }
-                return null;
-            };
-            return find(pageTree, id);
-        }
-        // Scans through the page tree, and returns all of them, in an array
-        function allPages() {
-            var list = [];
-            var walk = function(page) {
-                list.push(page);
-                for (var i = 0; i < page.children.length; i++)
-                    walk(page.children[i]);
-            };
-            walk(pageTree);
-            return list;
-        }
-        // Scans through the page tree, and returns all of the pages with 1 or more children, in an array
-        function allPagesWithChildren() {
-            var list = [];
-            var walk = function(page) {
-                if (page.children.length != 0) {
-                    // only the root page has an empty ID
-                    if (page.id != "")
-                        list.push(page);
-                    for (var i = 0; i < page.children.length; i++)
-                        walk(page.children[i]);
-                }
-            };
-            walk(pageTree);
-            return list;
-        }
-        // Collapse or show the nodes on the index tree
-        function refreshIndexVisibility() {
-            // Always refresh the status of all pages that have children
-            var pages = allPagesWithChildren();
-            // Make sure that the tree we're currently browsed to is opened.
-            // Additionally, a page can be specified as opened inside localStorage.
-            var targetPageID = decodeURIComponent(window.location.hash.substr(1));
-            var targetPath = findPagePathById(targetPageID);
-            var targetPage = targetPath ? targetPath[targetPath.length - 1] : null;
-            for (var i = 0; i < pages.length; i++) {
-                var page = pages[i];
-                var mustShow = getPageOpenedStatus(page.id);
-                if (targetPath && !mustShow) {
-                    // why targetPath.length - 1?
-                    // We do this so that it's possible to collapse a node. Just because you've navigated to
-                    // a node with children, doesn't mean you want it's children to be open. Specifically, you
-                    // might navigate to such a node, and then want to close it. You'll close it by clicking on
-                    // it again, which keeps you navigated to that node, BUT at the same time you also want
-                    // it's children to be hidden.
-                    for (var j = 0; j < targetPath.length - 1; j++) {
-                        if (targetPath[j] == page) {
-                            mustShow = true;
-                            break;
-                        }
-                    }
-                }
-                var elChildren = document.getElementById('children-' + page.id);
-                if (elChildren) {
-                    if (mustShow) {
-                        elChildren.classList.remove('hidden');
-                    } else {
-                        elChildren.classList.add('hidden');
-                    }
-                }
-                var elDoc = document.getElementById('doc-' + page.id);
-                if (elDoc) {
-                    if (mustShow) {
-                        elDoc.classList.remove('liCollapsed');
-                        elDoc.classList.add('liExpanded');
-                    } else {
-                        elDoc.classList.remove('liExpanded');
-                        elDoc.classList.add('liCollapsed');
-                    }
-                }
-            }
-            // refresh the active/not active status of all pages
-            var all = allPages();
-            for (var i = 0; i < all.length; i++) {
-                var el = document.getElementById('doc-' + all[i].id);
-                if (el) {
-                    if (targetPage == all[i])
-                        el.classList.add('currentTarget');
-                    else
-                        el.classList.remove('currentTarget');
-                }
-            }
-        }
-        function onBodyLoad() {
-            refreshIndexVisibility();
-        }
+        /*FRAME_SCRIPT_GLOBALS*/
+
+        /*FRAME_SCRIPT*/
+
     </script>
 </head>
+
 <body onload='onBodyLoad()'>
     <div class='indexPane'>
-<!-- INDEX -->
+        <!-- INDEX -->
     </div>
     <iframe class='contentPane' src='INITIAL_PAGE'></iframe>
 </body>
+
 </html>
