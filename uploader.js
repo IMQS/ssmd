@@ -23,8 +23,6 @@ class Uploader {
 			}
 		});
 		this.dist = options.dist;
-		// read 'dist/manifest/<module>.json'
-		//this.manifest = JSON.parse(fs.readFileSync([this.options.dist, 'manifest', this.moduleName() + ".json"].join("/"), { encoding: "utf-8" }));
 	}
 
 	bucketPrefix() {
@@ -41,8 +39,8 @@ class Uploader {
 		}
 	}
 
-	// Download the other manifests, and merge them together.
-	async downloadManifests(tmpDir) {
+	// Download all manifests that are currently online, so that we can merge them together.
+	async downloadAllManifests(tmpDir) {
 		return new Promise((resolve, reject) => {
 			let downloader = this.client.downloadDir({
 				localDir: tmpDir + "/manifest",
@@ -59,7 +57,10 @@ class Uploader {
 		// recommended by s3 package, to improve speed
 		//http.globalAgent.maxSockets = https.globalAgent.maxSockets = 20;
 
-		this.fetchPreviousJson(function () {
+		// read the manifest for just this module
+		this.manifest = JSON.parse(fs.readFileSync([this.dist, 'manifest', this.moduleName() + ".json"].join("/"), { encoding: "utf-8" }));
+
+		this.deleteStaleContent(function () {
 			this.uploadContent(null);
 		}.bind(this));
 	}
@@ -68,33 +69,38 @@ class Uploader {
 		let list = [];
 		let scan = function (node) {
 			list.push(node);
-			for (let c of node.children)
-				scan(c);
+			if (node.children) {
+				for (let c of node.children)
+					scan(c);
+			}
 		}
 		scan(root);
 		return list;
 	}
 
-	// Fetch the previous JSON that we uploaded
-	fetchPreviousJson(onfinish) {
+	// Fetch the previous manifest of just this module, so that we can figure out which
+	// files need to be deleted from S3
+	deleteStaleContent(onfinish) {
 		let prevKey = this.bucketPrefix() + 'manifest/' + this.moduleName() + ".json";
 		let downloader = this.client.downloadBuffer(Object.assign(this.s3Params(), {
 			Key: prevKey
 		}));
 		console.log("Fetching previous manifest from " + prevKey);
 
-		onJsonFetch = function (buf) {
+		let onJsonFetch = function (buf) {
 			// Compare the previous manifest to the current one. Delete any files that were present in the
 			// old manifest, but are no longer present in the current manifest.
+			// Since we're only looking at the manifest of our own module, we won't delete
+			// files that were uploaded by another module.
 			let previous = JSON.parse(buf);
 
-			let previousNodes = treeToArray(previous);
-			let nextNodes = treeToArray(this.manifest);
+			let previousNodes = this.treeToArray(previous);
+			let nextNodes = this.treeToArray(this.manifest);
 			let nextNodesByPath = {};
 			for (let n of nextNodes)
 				nextNodesByPath[n.path] = n;
-			deleteList = [];
-			deleteListUI = [];
+			let deleteList = [];
+			let deleteListUI = [];
 			for (let n of previousNodes) {
 				if (nextNodesByPath[n.path] === undefined) {
 					// this page has been deleted

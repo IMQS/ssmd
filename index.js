@@ -329,6 +329,7 @@ args.option('s3bucket', 'S3 Bucket Name (eg docs.example.com)');
 args.option('s3root', 'S3 Root directory inside bucket (eg /ssmd)', '');
 args.option('module', 'Name of this module, if this is a multi-repo document store', singleModule);
 args.option('dryrun', 'Do not actually upload', false);
+args.option('content', 'Content directory', 'content');
 const flags = args.parse(process.argv);
 
 // Ensure s3root has the form "foo/bar/" (always trailing slash, never leading slash)
@@ -368,7 +369,7 @@ async function run() {
 		});
 	}
 
-	let root = loadTreeOfMarkdownFiles(["content"], 1, ""); // a root index of 1 skips "content"
+	let root = loadTreeOfMarkdownFiles([flags.content], 1, ""); // a root index of 1 skips "content"
 
 	// Write our content into dist
 	let pageBuilder = new PageBuilder();
@@ -385,7 +386,7 @@ async function run() {
 			let local = manifestFilename(dist, flags.module);
 			merged = dist + '/manifest/_merged.json';
 			fs.writeFileSync(local, JSON.stringify(root.makeJSONPageTree(), null, 3));
-			await up.downloadManifests(tmp);
+			await up.downloadAllManifests(tmp);
 			createMergedManifest(merged, tmp, local);
 			console.log("Downloaded merged manifest");
 		} catch (err) {
@@ -403,12 +404,12 @@ async function run() {
 
 	if (up) {
 		if (!flags.dryrun) {
-			//console.info("Uploading...");
-			//up.upload();
+			console.info("Uploading...");
+			up.upload();
 		}
 	} else {
-		console.info("Skipping upload. Use --s3id <id> --s3key <key> --s3bucket <bucket> --s3root <root> if you want to upload to S3");
-		console.info("To serve local content:\n  node serve.js");
+		console.info("No S3 details provided; skipping upload");
+		console.info("You can preview the site in " + dist + "/index.html");
 	}
 }
 
