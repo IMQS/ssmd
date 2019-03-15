@@ -3,11 +3,14 @@ const fs = require('fs');
 const marked = require('marked');
 const uploader = require('./uploader')
 const args = require('args');
+const _ = require('underscore');
+const hljs = require('highlight.js');
 
 let singleModule = '_single';
 
 class Page {
-	constructor() {
+	constructor(parent) {
+		this.parent = parent;
 		this.path = [];
 		this.children = [];
 		this.name = "";
@@ -85,16 +88,34 @@ class Page {
 
 class PageBuilder {
 	constructor() {
-		this.frame = fs.readFileSync("themes/frame.html", { encoding: "utf-8" });
-		this.page = fs.readFileSync("themes/page.html", { encoding: "utf-8" });
-		this.indexJS = fs.readFileSync("themes/frame.js", { encoding: "utf-8" });
-		this.indexCSS = null;
+		this.frame = fs.readFileSync("templates/frame.html", { encoding: "utf-8" });
+		this.page = fs.readFileSync("templates/page.html", { encoding: "utf-8" });
+		this.indexJS = fs.readFileSync("templates/frame.js", { encoding: "utf-8" });
+		this.frameCSS = null;
 		this.pageCSS = null;
 	}
 
-	readTheme(themeName) {
-		this.indexCSS = fs.readFileSync("themes/" + themeName + "/frame.css", { encoding: "utf-8" });
-		this.pageCSS = fs.readFileSync("themes/" + themeName + "/page.css", { encoding: "utf-8" });
+	// themes/base/common.css + themes/base/<file>.css [+ themes/<themeName>/common.css] [+ themes/<themeName>/<file>.css]
+	mergeCSS(themeName, file) {
+		let merged = fs.readFileSync("themes/base/common.css", { encoding: "utf-8" });
+		merged += fs.readFileSync("themes/base/" + file + ".css", { encoding: "utf-8" });
+		try {
+			merged += fs.readFileSync("themes/" + themeName + "/common.css", { encoding: "utf-8" });
+		} catch (e) {
+			// it's fine for a theme to exclude a common.css file
+		}
+		try {
+			merged += fs.readFileSync("themes/" + themeName + "/" + file + ".css", { encoding: "utf-8" });
+		} catch (e) {
+			// it's fine for a theme to exclude customizing a file
+		}
+		return merged;
+	}
+
+	readTheme(themeName, highlightTheme) {
+		this.frameCSS = this.mergeCSS(themeName, 'frame');
+		this.pageCSS = this.mergeCSS(themeName, 'page');
+		this.pageCSS += "\n" + fs.readFileSync("node_modules/highlight.js/styles/" + highlightTheme + ".css", { encoding: "utf-8" });
 	}
 
 	makePage(content) {
@@ -123,31 +144,40 @@ class PageBuilder {
 		let makeHTML = (p, depth) => {
 			let self = "";
 			let indentDepth = indent.repeat(depth + 1);
+			let hasChildren = p.children && p.children.length != 0;
 			if (p.hasContent) {
-				let title = p.name;
 				let classes = 'indexItem';
-				if (p.children && p.children.length == 0)
+				if (hasChildren)
 					classes += " liNone";
-				self += indentDepth + `<li id='doc-${p.id}' class='${classes}' onclick='navigateToPage("${p.path}", "${p.id}")'>${title}</li>\n`;
+				self += indentDepth + `<div id='doc-${p.id}' x-path='${p.path}' x-id='${p.id}' class='${classes}'>`;
+				if (hasChildren)
+					self += `<div id='openclose-${p.id}' class='liBox' onclick='togglePageOpen("${p.id}")'></div>`;
+				else
+					self += `<div class='liBox'></div>`;
+				self += `<div class='liLabel' onclick='navigateToPage("${p.path}", "${p.id}")'>${_.escape(p.name)}</div>` +
+					`</div>\n`;
 			} else if (p.name !== "") {
 				// This is just a category node, without any content. So this might be something like "API", or "Reference".
-				self += indentDepth + `<li id='doc-${p.id}' class='indexItem' onclick='togglePageOpen("${p.id}")'>${p.name}</li>\n`;
+				self += indentDepth + `<div id='doc-${p.id}' x-path='${p.path}' x-id='${p.id}' class='indexItem'>` +
+					`<div id='openclose-${p.id}' class='liBox' onclick='togglePageOpen("${p.id}")'></div>` +
+					`<div class='liLabel'>${_.escape(p.name)}</div>` +
+					`</div>\n`;
 			}
 
-			if (p.children && p.children.length != 0) {
+			if (hasChildren) {
 				let style = "";
 				if (depth == 0) {
-					style += "padding-inline-start:0;"; // remove unnecessary padding from top-level <ul> element
+					style += "margin-left:0;"; // remove unnecessary padding from top-level <div> element
 				} else {
 					style += "";
 				}
-				let classes = "";
+				let classes = "indexList";
 				if (depth >= 1)
-					classes = "class='hidden'";
-				self += indentDepth + `<ul id='children-${p.id}' ${classes} style='${style}'>\n`;
+					classes += " hidden";
+				self += indentDepth + `<div id='children-${p.id}' class='${classes}' style='${style}'>\n`;
 				for (let c of p.children)
 					self += makeHTML(c, depth + 1);
-				self += indentDepth + '</ul>\n';
+				self += indentDepth + '</div>\n';
 			}
 			return self;
 		}
@@ -167,7 +197,7 @@ class PageBuilder {
 		let frame = this.frame;
 		frame = frame.replace("<!-- INDEX -->", listHTML);
 		frame = frame.replace("INITIAL_PAGE", this.firstPage(tree).path);
-		frame = frame.replace("/*FRAME_CSS*/", this.indexCSS);
+		frame = frame.replace("/*FRAME_CSS*/", this.frameCSS);
 		frame = frame.replace("/*FRAME_SCRIPT_GLOBALS*/", frameGlobalsStr);
 		frame = frame.replace("/*FRAME_SCRIPT*/", this.indexJS);
 		frame = frame.replace("/*PAGE_TREE*/", "var pageTree = " + JSON.stringify(tree, null, 3) + ";");
@@ -183,22 +213,22 @@ function normalizeTree(node) {
 		normalizeTree(c);
 }
 
-function loadTreeOfMarkdownFiles(parentPath, parentPathRootIndex, dir) {
+function loadTreeOfMarkdownFiles(parentPage, parentPath, parentPathRootIndex, dir) {
 	let myPath = parentPath;
 	if (dir != "") {
 		// This is the usual case. The only case where dir = "" is for the root object
 		myPath = parentPath.concat(dir);
 	}
-	let root = new Page();
+	let root = new Page(parentPage);
 	root.name = dir;
 	root.path = parentPath.slice(parentPathRootIndex); // slice off the first part, which is the root 'content' directory
 	for (var f of fs.readdirSync(myPath.join("/"))) {
 		let st = fs.statSync(myPath.concat(f).join("/"));
 		if (st.isDirectory()) {
-			root.children.push(loadTreeOfMarkdownFiles(myPath, parentPathRootIndex, f));
+			root.children.push(loadTreeOfMarkdownFiles(root, myPath, parentPathRootIndex, f));
 		} else if (st.isFile()) {
 			if (f.match(/\.md$/)) {
-				let p = new Page();
+				let p = new Page(root);
 				p.name = f.substr(0, f.length - 3);
 				p.markdown = fs.readFileSync(myPath.concat(f).join("/"), { encoding: "utf-8" });
 				p.path = myPath.slice(parentPathRootIndex);
@@ -283,10 +313,67 @@ function rmdirRecursive(dir) {
 	fs.rmdirSync(dir);
 }
 
-function writeTreeRecursive(outDir, pageBuilder, page) {
+function isAPIDoc(page) {
+	return page.name.match(/API/);
+}
+
+// Detect if this is an HTTP API page, and make some tweaks to improve the appearance of the page
+function preprocessAPIDocs(options, page, md, addTitle) {
+	if (addTitle) {
+		let title = (page.parent ? page.parent.name : "") + " API";
+		md = "# " + title + "\n" + md;
+	}
+	let t = "";
+	for (let line of md.split("\n")) {
+		// This matches:
+		// # GET /my/api
+		// # POST /my/api
+		// # POST|PATCH /my/api
+		// # POST,PATCH /my/api
+		// # POST/PATCH /my/api
+		// # POST\PATCH /my/api
+		let m = line.match(/^#\s((?:GET|HEAD|POST|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH)(?:\||\/|\\|,)?)+\s(.+)/)
+		if (m) {
+			t += "#".repeat(options.apiHeaderLevel) + " $-API-$ `" + m[1] + "` " + m[2] + "\n";
+		} else {
+			t += line + "\n";
+		}
+	}
+	return t;
+}
+
+function highlight(code, lang, callback) {
+	let h = null;
+	if (lang) {
+		h = hljs.highlight(lang, code, true, null);
+	} else {
+		h = hljs.highlightAuto(code, null);
+		if (!(h.language === "json" || h.language === "xml")) {
+			// Only format JSON and XML automatically.
+			// Auto-detect for other languages is too weak, and causes too many false positives.
+			return code;
+		}
+	}
+	return h.value;
+}
+
+function writeTreeRecursive(renderer, options, outDir, pageBuilder, page) {
 	if (page.markdown != "") {
 		let filename = outDir.concat(page.name + ".html").join("/");
-		let html = pageBuilder.makePage(marked(page.markdown));
+		let markedOptions = {
+			renderer: renderer,
+			highlight: highlight,
+		};
+		page.markdown = page.markdown.trim();
+		let md = page.markdown;
+		let titleMatch = md.match(/# ./);
+		let hasTitle = titleMatch && titleMatch.index === 0;
+		let isAPI = isAPIDoc(page);
+		if (isAPI)
+			md = preprocessAPIDocs(options, page, md, options.autoTitles && !hasTitle);
+		else if (options.autoTitles && !hasTitle)
+			md = "# " + page.name + "\n" + md;
+		let html = pageBuilder.makePage(marked(md, markedOptions));
 		fs.writeFileSync(filename, html);
 	}
 
@@ -294,7 +381,7 @@ function writeTreeRecursive(outDir, pageBuilder, page) {
 		if (page.name != "")
 			fs.mkdirSync(outDir.concat(page.name).join("/"));
 		for (var c of page.children)
-			writeTreeRecursive(outDir.concat(page.name), pageBuilder, c);
+			writeTreeRecursive(renderer, options, outDir.concat(page.name), pageBuilder, c);
 	}
 }
 
@@ -316,12 +403,27 @@ function manifestFilename(outDir, moduleName) {
 	return outDir + "/manifest/" + moduleName + ".json";
 }
 
-function writeTree(outDir, moduleName, deployParams, pageBuilder, root) {
-	writeTreeRecursive([outDir], pageBuilder, root);
-	//fs.writeFileSync(manifestFilename(outDir, moduleName), JSON.stringify(root.makeJSONPageTree(), null, 3));
-	//fs.writeFileSync(outDir + "/index.html", pageBuilder.makeIndexFrame(root, moduleName, deployParams));
-}
+function writeTree(outDir, options, moduleName, deployParams, pageBuilder, root) {
+	let renderer = new marked.Renderer();
+	renderer.link = (href, title, text) => {
+		// Since our content lives inside an iframe, we always want to open a new tab if the user clicks on
+		// a link that comes from a markdown file.
+		return `<a href="${href}" target="_blank">${text}</a>`;
+	};
+	renderer.heading = (text, level, raw, slugger) => {
+		if (level === options.apiHeaderLevel && text.match(/^\$-API-\$/)) {
+			return `<h${level} class='api'>${text.substr(8)}</h${level}>`;
+		}
+		return `<h${level}>${text}</h${level}>`;
+	};
+	renderer.code = (code, language, isEscaped) => {
+		if (language !== undefined) {
 
+		}
+		return `<code>${code}</code>`;
+	};
+	writeTreeRecursive(renderer, options, [outDir], pageBuilder, root);
+}
 
 args.option('s3id', 'S3 Access ID');
 args.option('s3key', 'S3 Secret Key');
@@ -330,6 +432,8 @@ args.option('s3root', 'S3 Root directory inside bucket (eg /ssmd)', '');
 args.option('module', 'Name of this module, if this is a multi-repo document store', singleModule);
 args.option('dryrun', 'Do not actually upload', false);
 args.option('content', 'Content directory', 'content');
+args.option('theme', 'Theme', 'muted');
+args.option('highlight', 'Highlight.js theme', 'solarized-light');
 const flags = args.parse(process.argv);
 
 // Ensure s3root has the form "foo/bar/" (always trailing slash, never leading slash)
@@ -369,12 +473,16 @@ async function run() {
 		});
 	}
 
-	let root = loadTreeOfMarkdownFiles([flags.content], 1, ""); // a root index of 1 skips "content"
+	let root = loadTreeOfMarkdownFiles(null, [flags.content], 1, ""); // a root index of 1 skips "content"
 
 	// Write our content into dist
 	let pageBuilder = new PageBuilder();
-	pageBuilder.readTheme("default");
-	writeTree(dist, flags.module, deployParams, pageBuilder, root);
+	pageBuilder.readTheme(flags.theme, flags.highlight);
+	let options = {
+		autoTitles: true,
+		apiHeaderLevel: 2,
+	};
+	writeTree(dist, options, flags.module, deployParams, pageBuilder, root);
 
 	// Produce the merged manifest
 	let merged = '';

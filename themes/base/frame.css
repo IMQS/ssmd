@@ -1,0 +1,79 @@
+/* This is injected into index.html */
+
+html {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    margin: 0;
+    height: 100%;
+}
+
+.indexPane {
+    box-sizing: border-box;
+    width: 20em;
+    height: 100%;
+    padding: 1em 1em 1em 1.5em;
+}
+
+.contentPane {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    border: none;
+    height: 100%;
+}
+
+.indexList {
+    font-size: 15px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    margin-left: 0.6em;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.indexItem {
+    cursor: pointer;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.indexCategory {
+    color: #555;
+}
+
+.liBox {
+    width: 17px;
+    height: 17px;
+    background-repeat: no-repeat;
+    background-size: 17px 17px;
+    margin-right: 0px;
+    flex: 0 0 auto;
+}
+
+.liLabel {
+    text-indent: -0.6em; /* This makes it obvious when an index item's label is long, and has wrapped around */
+    margin-left: 0.6em; /* this is just to counteract the negative text-indent */
+}
+
+.liCollapsed {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke-width="0"><polygon points="9 18 15 12 9 6"></polygon></svg>');
+}
+
+.liExpanded {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke-width="0"><polygon points="6 9 12 15 18 9"></polygon></svg>');
+}
+
+.liNone {
+    list-style-type: none;
+}
+
+.hidden {
+    display: none;
+}
+
+.currentTarget {
+    font-weight: 700;
+}

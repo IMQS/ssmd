@@ -11,29 +11,34 @@ function getPageOpenedStatus(id) {
 	return localStorage.getItem("opened-" + id) == "1";
 }
 
+function foobar(ev) {
+	console.log(ev);
+}
+
 function navigateToPage(url, id) {
 	// Navigate the iframe to a new location
 	var content = document.getElementsByClassName('contentPane')[0];
 	content.src = url;
 	window.location.hash = id;
-	var page = findPageById(id);
-	if (page && page.children.length != 0) {
-		togglePageOpen(id);
-	}
-	refreshIndexVisibility();
+	//var page = findPageById(id);
+	//if (page && page.children.length != 0) {
+	//	togglePageOpen(id);
+	//}
+	refreshIndexVisibility(false);
 }
 
 function togglePageOpen(id) {
 	setPageOpenedStatus(id, !getPageOpenedStatus(id));
-	refreshIndexVisibility();
+	refreshIndexVisibility(false);
 }
 
 function findPageById(id) {
-	var path = findPagePathById(id);
-	if (path == null)
+	var treePath = findPagePathById(id);
+	if (treePath == null)
 		return null;
-	return path[path.length - 1];
+	return treePath[treePath.length - 1];
 }
+
 // Returns an array of pages, from the root down to the desired page, or returns null if item not found
 function findPagePathById(id) {
 	if (id === null || id === undefined || id == "")
@@ -79,54 +84,8 @@ function allPagesWithChildren() {
 	return list;
 }
 
-function showError(msg) {
-	alert(msg);
-}
-
-// Build the HTML content of the index navigator.
-// We do this by stitching together all of the JSON files that we fetch from the server
-function loadManifest() {
-	/*
-	// This can be used to fetch the list of JSON documents, but EVERYONE must be granted
-	// the permission "List Objects".
-	// curl "http://docs.imqs.co.za.s3.amazonaws.com/?list-type=2&prefix=test1/manifest"
-	var r = new XMLHttpRequest();
-	var ssmd = window.ssmd;
-	var url = "http://" + ssmd.s3bucket + ".s3.amazonaws.com/?list-type=2";
-	if (ssmd.s3root != "")
-		url += "&prefix=" + encodeURIComponent(ssmd.s3root);
-	r.open("GET", url);
-	r.onreadystatechange = function () {
-		if (this.readyState == 4) {
-			if (this.status == 200) {
-				console.log("JSON manifests:", this.responseXML);
-			} else {
-				showError("Failed to load JSON manifests from " + url + ":" + this.responseText);
-			}
-		}
-	}
-	r.send();
-	*/
-	var r = new XMLHttpRequest();
-	r.open("GET", "manifests/combined.json");
-	r.onreadystatechange = function () {
-		if (this.readyState == 4) {
-			if (this.status == 200) {
-				console.log("JSON manifests:", this.responseXML);
-			} else {
-				showError("Failed to load JSON manifests from " + url + ":" + this.responseText);
-			}
-		}
-	}
-	r.send();
-}
-
-function buildIndexHtml() {
-}
-
-
 // Collapse or show the nodes on the index tree
-function refreshIndexVisibility() {
+function refreshIndexVisibility(ensureTargetPageIsOpened) {
 	// Always refresh the status of all pages that have children
 	var pages = allPagesWithChildren();
 	// Make sure that the tree we're currently browsed to is opened.
@@ -137,7 +96,7 @@ function refreshIndexVisibility() {
 	for (var i = 0; i < pages.length; i++) {
 		var page = pages[i];
 		var mustShow = getPageOpenedStatus(page.id);
-		if (targetPath && !mustShow) {
+		if (ensureTargetPageIsOpened && targetPath && !mustShow) {
 			// why targetPath.length - 1?
 			// We do this so that it's possible to collapse a node. Just because you've navigated to
 			// a node with children, doesn't mean you want it's children to be open. Specifically, you
@@ -159,7 +118,7 @@ function refreshIndexVisibility() {
 				elChildren.classList.add('hidden');
 			}
 		}
-		var elDoc = document.getElementById('doc-' + page.id);
+		var elDoc = document.getElementById('openclose-' + page.id);
 		if (elDoc) {
 			if (mustShow) {
 				elDoc.classList.remove('liCollapsed');
@@ -184,7 +143,18 @@ function refreshIndexVisibility() {
 }
 
 function onBodyLoad() {
-	//loadManifests();
-	refreshIndexVisibility();
+	refreshIndexVisibility(true);
+
+	// Load the correct page from the URL hash
+	var id = window.location.hash;
+	if (id !== '') {
+		id = id.substr(1); // chop off #
+		id = decodeURIComponent(id);
+		var page = findPageById(id);
+		if (page) {
+			var content = document.getElementsByClassName('contentPane')[0];
+			content.src = page.path;
+		}
+	}
 }
 

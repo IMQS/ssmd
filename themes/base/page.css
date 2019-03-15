@@ -1,0 +1,124 @@
+body {
+    /* Add a small indent to the entire body, so that we can shift elements such as API
+    titles to the left. What we're really doing here, is indenting everything else,
+    but we're inverting the solution here */
+    margin-left: 14px;
+}
+
+h1 {
+    font-size: 30px;
+    font-weight: 600;
+    margin-left: -14px;
+}
+
+h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-left: -14px;
+}
+
+h3 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+h4 {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+p {
+    max-width: 40em;
+    font-size: 14px;
+    line-height: 1.385;
+}
+
+li {
+    max-width: 40em;
+    font-size: 14px;
+    line-height: 1.385;
+}
+
+ul {
+    max-width: 40em;
+    font-size: 14px;
+    line-height: 1.385;
+}
+
+th {
+    font-size: 14px;
+}
+
+td {
+    font-size: 14px;
+}
+
+a:visited {
+    color: rgb(9, 9, 185);
+    text-decoration: none;
+}
+
+a {
+    color: rgb(9, 9, 185);
+    text-decoration: none;
+}
+
+pre {
+    /* background-color: #f5f5f5; */
+    padding: 1em;
+    border-radius: 2px;
+    max-width: 80em;
+    font-size: 14px;
+    border: solid 1px #ddd;
+    font-family: Consolas, 'Courier New', Courier, monospace;
+}
+
+code {
+    /* background-color: #f5f5f5; */
+    padding: 0px 2px;
+    border-radius: 3px;
+    font-size: 14px;
+    font-family: Consolas, 'Courier New', Courier, monospace;
+}
+
+.useHighlight {
+    background-color: unset;
+}
+
+table {
+    max-width: 60em;
+    padding-left: 0.5em;
+    border-spacing: 0;
+    border-collapse: collapse;
+}
+
+table tr:nth-child(2n) {
+    background-color: #e8e8e8;
+}
+
+td {
+    max-width: 40em;
+    padding: 0.4em 0.5em 0.4em 0.5em;
+    vertical-align: top;
+    border: solid 1px #ccc;
+}
+
+th {
+    padding: 0.5em 0.5em;
+    text-align: left;
+    border: solid 1px #ccc;
+}
+
+.api {
+    margin-left: -13px;
+    border-radius: 5px;
+    border: solid 1px hsl(0, 0%, 85%);
+    background-color: hsl(120, 20%, 91%);
+    padding: 4px 6px;
+    font-weight: 400;
+    display: inline-block;
+}
+.api code {
+    font-size: 1em;
+    background-color: unset;
+}

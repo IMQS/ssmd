@@ -14,17 +14,21 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Launch SSMD",
-			"program": "${workspaceFolder}\\index.js",
+			"program": "${workspaceFolder}/index.js",
 			"args": [
-				"--s3id"
-				"SECRET",
-				"--s3key",
-				"SECRET",
-				"--s3bucket",
-				"docs.imqs.co.za",
-				"--s3root",
-				"test1",
+				"-c",
+				"../maps/docs/content",
 			]
+			//"args": [
+			//	"--s3id"
+			//	"SECRET",
+			//	"--s3key",
+			//	"SECRET",
+			//	"--s3bucket",
+			//	"docs.imqs.co.za",
+			//	"--s3root",
+			//	"test1",
+			//]
 		}
 	]
 }
