@@ -403,6 +403,34 @@ function manifestFilename(outDir, moduleName) {
 	return outDir + "/manifest/" + moduleName + ".json";
 }
 
+// The 'escape' function is copied from the marked sources
+function escape(html, encode) {
+	if (encode) {
+		if (escape.escapeTest.test(html)) {
+			return html.replace(escape.escapeReplace, function (ch) { return escape.replacements[ch]; });
+		}
+	} else {
+		if (escape.escapeTestNoEncode.test(html)) {
+			return html.replace(escape.escapeReplaceNoEncode, function (ch) { return escape.replacements[ch]; });
+		}
+	}
+
+	return html;
+}
+
+escape.escapeTest = /[&<>"']/;
+escape.escapeReplace = /[&<>"']/g;
+escape.replacements = {
+	'&': '&amp;',
+	'<': '&lt;',
+	'>': '&gt;',
+	'"': '&quot;',
+	"'": '&#39;'
+};
+
+escape.escapeTestNoEncode = /[<>"']|&(?!#?\w+;)/;
+escape.escapeReplaceNoEncode = /[<>"']|&(?!#?\w+;)/g;
+
 function writeTree(outDir, options, moduleName, deployParams, pageBuilder, root) {
 	let renderer = new marked.Renderer();
 	renderer.link = (href, title, text) => {
@@ -416,12 +444,33 @@ function writeTree(outDir, options, moduleName, deployParams, pageBuilder, root)
 		}
 		return `<h${level}>${text}</h${level}>`;
 	};
-	renderer.code = (code, language, isEscaped) => {
-		if (language !== undefined) {
-
+	// This is a fork of the 'code' function from the marked sources
+	renderer.code = function (code, lang, escaped) {
+		if (code.indexOf("Busy") == 0) {
+			let d = 123;
 		}
-		return `<code>${code}</code>`;
-	};
+		if (this.options.highlight) {
+			var out = this.options.highlight(code, lang);
+			if (out != null && out !== code) {
+				escaped = true;
+				code = out;
+			}
+		}
+
+		if (!lang) {
+			return '<pre class="hljs"><code>'
+				+ (escaped ? code : escape(code, true))
+				+ '</code></pre>';
+		}
+
+		// We apply class=hljs on <pre> so that the background color applies to the entire thing
+		return '<pre class="hljs"><code class="'
+			+ this.options.langPrefix
+			+ escape(lang, true)
+			+ '">'
+			+ (escaped ? code : escape(code, true))
+			+ '</code></pre>\n';
+	}.bind(renderer);
 	writeTreeRecursive(renderer, options, [outDir], pageBuilder, root);
 }
 
@@ -433,7 +482,7 @@ args.option('module', 'Name of this module, if this is a multi-repo document sto
 args.option('dryrun', 'Do not actually upload', false);
 args.option('content', 'Content directory', 'content');
 args.option('theme', 'Theme', 'muted');
-args.option('highlight', 'Highlight.js theme', 'solarized-light');
+args.option('highlight', 'Highlight.js theme', 'github-gist');
 const flags = args.parse(process.argv);
 
 // Ensure s3root has the form "foo/bar/" (always trailing slash, never leading slash)
