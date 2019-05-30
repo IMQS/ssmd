@@ -3,16 +3,6 @@ body {
     background-color: hsl(53, 22%, 96%);
 }
 
-/*
-pre {
-    background-color: hsl(42, 25%, 93%);
-}
-
-code {
-    background-color: hsl(42, 25%, 93%);
-}
-*/
-
 table tr:nth-child(even) {
     background-color: hsl(42, 25%, 91%);
 }

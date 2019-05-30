@@ -1,5 +1,5 @@
 'use strict';
-let ssmd = require('..');
+let ssmd = require('../ssmd');
 let t = require('tape');
 
 function deepClone(tree) {

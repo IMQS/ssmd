@@ -189,8 +189,8 @@ class PageBuilder {
 		//	s3bucket: deployParams.s3bucket || '',
 		//	s3root: deployParams.s3root || '',
 		//};
-		//let frameGlobalsStr = "window.ssmd = " + JSON.stringify(frameGlobals) + ";";
-		let frameGlobalsStr = "window.ssmd = {};";
+		//let frameGlobalsStr = "window.csmd = " + JSON.stringify(frameGlobals) + ";";
+		let frameGlobalsStr = "window.csmd = {};";
 
 		let listHTML = makeHTML(tree, 0);
 		//list = "<ul>\n" + list + "</ul>\n";
@@ -474,25 +474,27 @@ function writeTree(outDir, options, moduleName, deployParams, pageBuilder, root)
 	writeTreeRecursive(renderer, options, [outDir], pageBuilder, root);
 }
 
-args.option('s3id', 'S3 Access ID');
-args.option('s3key', 'S3 Secret Key');
+args.option('s3id', 'S3 Access ID (eg TJE2PBV7N48MJ8AZPG6N)');
+args.option('s3key', 'S3 Secret Key (eg fvjR8bGy95E4eu77Q7BUh9ai2vkA7uqmxTii64ZF) ');
 args.option('s3bucket', 'S3 Bucket Name (eg docs.example.com)');
-args.option('s3root', 'S3 Root directory inside bucket (eg /ssmd)', '');
+args.option('s3root', 'S3 Root directory inside bucket (eg /docs)', '');
 args.option('module', 'Name of this module, if this is a multi-repo document store', singleModule);
 args.option('dryrun', 'Do not actually upload', false);
-args.option('content', 'Content directory', 'content');
+args.option('content', 'Content directory', '');
 args.option('theme', 'Theme', 'muted');
 args.option('highlight', 'Highlight.js theme', 'github-gist');
-const flags = args.parse(process.argv);
 
-// Ensure s3root has the form "foo/bar/" (always trailing slash, never leading slash)
-let s3root = flags.s3root;
-if (s3root.length != 0 && s3root[0] == '/')
-	s3root = s3root.substr(1);
-if (s3root.length != 0 && s3root[s3root.length - 1] != '/')
-	s3root += '/';
+// flags are the options from 'args', eg {content: '/docs'}
+async function run(flags) {
+	if (flags.content === undefined || flags.content == '')
+		throw "You must specify the 'content' directory";
 
-async function run() {
+	// Ensure s3root has the form "foo/bar/" (always trailing slash, never leading slash)
+	let s3root = flags.s3root;
+	if (s3root.length != 0 && s3root[0] == '/')
+		s3root = s3root.substr(1);
+	if (s3root.length != 0 && s3root[s3root.length - 1] != '/')
+		s3root += '/';
 
 	let deployParams = {
 		s3bucket: flags.s3bucket,
@@ -500,7 +502,7 @@ async function run() {
 	};
 
 	let dist = 'dist';
-	let tmp = 'tmp';
+	let tmp = 'csmd_tmp';
 	rmdirRecursive(dist);
 	rmdirRecursive(tmp);
 	mkdirRobust(dist);
@@ -570,9 +572,17 @@ async function run() {
 	}
 }
 
-run().catch((err) => { console.error(err) });
-
-// for unit tests
-module.exports = {
-	mergeTree
+if (require.main === module) {
+	const flags = args.parse(process.argv);
+	run(flags).catch((err) => { console.error(err) });
+} else {
+	let csmd = {
+		run,
+		mergeTree, // exposed for unit tests
+	};
+	if (typeof module !== 'undefined' && typeof exports === 'object') {
+		module.exports = csmd;
+	} else if (typeof define === 'function' && define.amd) {
+		define(function () { return csmd; });
+	}
 }
