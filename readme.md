@@ -1,6 +1,7 @@
 # Super Simple Markdown Docs
 
 Super Simple Markdown Docs is *the simplest* way to create documentation.
+
 If you know markdown, and you can create a file, you already know how to use it.
 
 1. Create your documentation hierarchy of `.md` files:
