@@ -189,8 +189,8 @@ class PageBuilder {
 		//	s3bucket: deployParams.s3bucket || '',
 		//	s3root: deployParams.s3root || '',
 		//};
-		//let frameGlobalsStr = "window.csmd = " + JSON.stringify(frameGlobals) + ";";
-		let frameGlobalsStr = "window.csmd = {};";
+		//let frameGlobalsStr = "window.ssmd = " + JSON.stringify(frameGlobals) + ";";
+		let frameGlobalsStr = "window.ssmd = {};";
 
 		let listHTML = makeHTML(tree, 0);
 		//list = "<ul>\n" + list + "</ul>\n";
@@ -502,7 +502,7 @@ async function run(flags) {
 	};
 
 	let dist = 'dist';
-	let tmp = 'csmd_tmp';
+	let tmp = 'ssmd_tmp';
 	rmdirRecursive(dist);
 	rmdirRecursive(tmp);
 	mkdirRobust(dist);
@@ -576,13 +576,13 @@ if (require.main === module) {
 	const flags = args.parse(process.argv);
 	run(flags).catch((err) => { console.error(err) });
 } else {
-	let csmd = {
+	let ssmd = {
 		run,
 		mergeTree, // exposed for unit tests
 	};
 	if (typeof module !== 'undefined' && typeof exports === 'object') {
-		module.exports = csmd;
+		module.exports = ssmd;
 	} else if (typeof define === 'function' && define.amd) {
-		define(function () { return csmd; });
+		define(function () { return ssmd; });
 	}
 }
