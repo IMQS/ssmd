@@ -24,11 +24,11 @@
 	},
 	"homepage": "https://github.com/IMQS/ssmd#readme",
 	"dependencies": {
-		"args": "^5.0.0",
-		"highlight.js": "^9.15.6",
+		"args": "^5.0.1",
+		"highlight.js": "^9.15.10",
 		"marked": "^0.5.2",
 		"s3": "^4.4.0",
-		"tape": "^4.10.1",
+		"tape": "^4.11.0",
 		"underscore": "^1.9.1"
 	}
 }

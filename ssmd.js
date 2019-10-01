@@ -87,25 +87,26 @@ class Page {
 }
 
 class PageBuilder {
-	constructor() {
-		this.frame = fs.readFileSync("templates/frame.html", { encoding: "utf-8" });
-		this.page = fs.readFileSync("templates/page.html", { encoding: "utf-8" });
-		this.indexJS = fs.readFileSync("templates/frame.js", { encoding: "utf-8" });
+	constructor(ownDir) {
+		this.ownDir = ownDir;
+		this.frame = fs.readFileSync(this.ownDir + "/templates/frame.html", { encoding: "utf-8" });
+		this.page = fs.readFileSync(this.ownDir + "/templates/page.html", { encoding: "utf-8" });
+		this.indexJS = fs.readFileSync(this.ownDir + "/templates/frame.js", { encoding: "utf-8" });
 		this.frameCSS = null;
 		this.pageCSS = null;
 	}
 
 	// themes/base/common.css + themes/base/<file>.css [+ themes/<themeName>/common.css] [+ themes/<themeName>/<file>.css]
 	mergeCSS(themeName, file) {
-		let merged = fs.readFileSync("themes/base/common.css", { encoding: "utf-8" });
-		merged += fs.readFileSync("themes/base/" + file + ".css", { encoding: "utf-8" });
+		let merged = fs.readFileSync(this.ownDir + "/themes/base/common.css", { encoding: "utf-8" });
+		merged += fs.readFileSync(this.ownDir + "/themes/base/" + file + ".css", { encoding: "utf-8" });
 		try {
-			merged += fs.readFileSync("themes/" + themeName + "/common.css", { encoding: "utf-8" });
+			merged += fs.readFileSync(this.ownDir + "/themes/" + themeName + "/common.css", { encoding: "utf-8" });
 		} catch (e) {
 			// it's fine for a theme to exclude a common.css file
 		}
 		try {
-			merged += fs.readFileSync("themes/" + themeName + "/" + file + ".css", { encoding: "utf-8" });
+			merged += fs.readFileSync(this.ownDir + "/themes/" + themeName + "/" + file + ".css", { encoding: "utf-8" });
 		} catch (e) {
 			// it's fine for a theme to exclude customizing a file
 		}
@@ -489,12 +490,27 @@ async function run(flags) {
 	if (flags.content === undefined || flags.content == '')
 		throw "You must specify the 'content' directory";
 
+	// Set defaults, for the case where we're not launched from the command line
+	if (flags.s3root === undefined)
+		flags.s3root = '';
+	if (flags.module === undefined)
+		flags.module = singleModule;
+	if (flags.dryrun === undefined)
+		flags.dryrun = false;
+	if (flags.theme === undefined)
+		flags.theme = 'muted';
+	if (flags.highlight === undefined)
+		flags.highlight = 'github-gist';
+
+	let ownDir = __dirname;
+
 	// Ensure s3root has the form "foo/bar/" (always trailing slash, never leading slash)
 	let s3root = flags.s3root;
 	if (s3root.length != 0 && s3root[0] == '/')
 		s3root = s3root.substr(1);
 	if (s3root.length != 0 && s3root[s3root.length - 1] != '/')
 		s3root += '/';
+	flags.s3root = s3root;
 
 	let deployParams = {
 		s3bucket: flags.s3bucket,
@@ -527,7 +543,7 @@ async function run(flags) {
 	let root = loadTreeOfMarkdownFiles(null, [flags.content], 1, ""); // a root index of 1 skips "content"
 
 	// Write our content into dist
-	let pageBuilder = new PageBuilder();
+	let pageBuilder = new PageBuilder(ownDir);
 	pageBuilder.readTheme(flags.theme, flags.highlight);
 	let options = {
 		autoTitles: true,
