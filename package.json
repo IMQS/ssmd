@@ -1,5 +1,5 @@
 {
-	"name": "ssmd",
+	"name": "ssmdocs",
 	"version": "1.0.1",
 	"description": "Super Simple Markdown Docs",
 	"main": "ssmd.js",
@@ -26,7 +26,7 @@
 	"dependencies": {
 		"args": "^5.0.1",
 		"highlight.js": "^9.15.10",
-		"marked": "^0.7.0",
+		"marked": "^0.6.1",
 		"s3": "^4.4.0",
 		"tape": "^4.11.0",
 		"underscore": "^1.9.1"
