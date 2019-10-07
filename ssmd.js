@@ -299,7 +299,7 @@ function createMergedManifest(mergedFilename, tmpDir, newManifestFile) {
 	fs.writeFileSync(mergedFilename, JSON.stringify(merged, null, 3));
 }
 
-function rmdirRecursive(dir) {
+function rmdirRecursive(dir, depth) {
 	if (!fs.existsSync(dir))
 		return;
 	for (let f of fs.readdirSync(dir)) {
@@ -308,10 +308,20 @@ function rmdirRecursive(dir) {
 		if (st.isFile()) {
 			fs.unlinkSync(full);
 		} else {
-			rmdirRecursive(full);
+			rmdirRecursive(full, depth + 1);
 		}
 	}
-	fs.rmdirSync(dir);
+
+	try {
+		fs.rmdirSync(dir);
+	} catch (e) {
+		// Ignore at level 0, so that from inside Docker, we can ignore the deletion of the
+		// 'dist' directory, which will often be a mounted volumne that cannot be deleted.
+		if (depth === 0)
+			console.log(`Failed to delete directory ${dir} - ignoring`);
+		else
+			throw e;
+	}
 }
 
 function isAPIDoc(page) {
@@ -394,6 +404,8 @@ function mkdirRobust(dir) {
 			fs.mkdirSync(dir);
 			break;
 		} catch (e) {
+			if (e.code === 'EEXIST')
+				break;
 			if (i == attempts - 1)
 				throw e;
 		}
@@ -484,6 +496,7 @@ args.option('dryrun', 'Do not actually upload', false);
 args.option('content', 'Content directory', '');
 args.option('theme', 'Theme', 'muted');
 args.option('highlight', 'Highlight.js theme', 'github-gist');
+args.option('output', 'Output directory', 'dist');
 
 // flags are the options from 'args', eg {content: '/docs'}
 async function run(flags) {
@@ -501,6 +514,8 @@ async function run(flags) {
 		flags.theme = 'muted';
 	if (flags.highlight === undefined)
 		flags.highlight = 'github-gist';
+	if (flags.output === undefined)
+		flags.output = 'dist';
 
 	let ownDir = __dirname;
 
@@ -517,10 +532,10 @@ async function run(flags) {
 		s3root: s3root,
 	};
 
-	let dist = 'dist';
+	let dist = flags.output;
 	let tmp = 'ssmd_tmp';
-	rmdirRecursive(dist);
-	rmdirRecursive(tmp);
+	rmdirRecursive(dist, 0);
+	rmdirRecursive(tmp, 0);
 	mkdirRobust(dist);
 	mkdirRobust(tmp);
 	mkdirRobust(dist + '/manifest');

@@ -1,0 +1,7 @@
+.vscode
+examples
+node_modules
+dist
+ssmd_tmp
+tmp
+Dockerfile
